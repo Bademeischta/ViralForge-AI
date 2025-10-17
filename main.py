@@ -8,6 +8,7 @@ from viralforge.pipeline import ContentPipeline
 from viralforge.recognizer import SignalRecognizer
 from viralforge.curator import ClipCurator
 from viralforge.editor import VideoEditor
+from viralforge.hollywood_editor import HollywoodEditor
 
 # V2 Components
 from viralforge.game_pipeline import GameDataPipeline
@@ -81,10 +82,9 @@ def run_v2_valorant_pipeline(youtube_url: str, output_dir: str, workspace_dir: s
         logging.warning("V2 Narrative Curator found no suitable clips.")
         return
 
-    # --- V1/V2 Phase 4: Editing ---
-    # The editor is re-used for V2 as well
-    editor = VideoEditor(video_path, transcript_result)
-    editor.produce_viral_clips(best_narratives, output_dir)
+    # --- V2 Phase 4: Hollywood Editing ---
+    editor = HollywoodEditor(video_path, transcript_result)
+    editor.produce_valorant_clips(best_narratives, output_dir)
 
 def main():
     parser = argparse.ArgumentParser(description="ViralForge AI: Automatically create short-form viral clips from YouTube videos.")
