@@ -17,16 +17,16 @@ class ClipCurator:
         'silence': 5,
     }
 
-    def __init__(self, signals: List[Dict], transcript: List[Dict]):
+    def __init__(self, signals: List[Dict], transcript_result: Dict):
         """
         Initializes the ClipCurator.
 
         Args:
             signals (List[Dict]): The sorted list of signals from SignalRecognizer.
-            transcript (List[Dict]): The full, timestamped transcript.
+            transcript_result (Dict): The full result object from Whisper.
         """
         self.signals = signals
-        self.transcript = transcript
+        self.transcript = transcript_result.get('segments', [])
         if not self.transcript:
             self.video_duration = 0
         else:

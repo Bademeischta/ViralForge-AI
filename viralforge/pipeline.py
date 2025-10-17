@@ -114,9 +114,10 @@ class ContentPipeline:
         try:
             model = whisper.load_model("base")
             logging.info("Model loaded. Starting transcription...")
-            result = model.transcribe(audio_path, verbose=False)
+            result = model.transcribe(audio_path, verbose=False, word_timestamps=True)
             logging.info("Transcription completed.")
-            return result['segments']
+            # The result now contains word-level timestamps, which we will pass along.
+            return result
         except Exception as e:
             logging.error(f"Error during audio transcription: {e}")
             return None

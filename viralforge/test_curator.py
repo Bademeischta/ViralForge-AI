@@ -5,16 +5,18 @@ class TestClipCurator(unittest.TestCase):
 
     def setUp(self):
         """Set up a mock transcript and a list of signals for testing."""
-        self.mock_transcript = [
-            {'text': 'Hello there.', 'start': 0.0, 'end': 1.5},
-            {'text': 'So, what is the plan?', 'start': 2.0, 'end': 4.0},
-            {'text': 'This is just amazing!', 'start': 5.0, 'end': 7.5},
-            {'text': 'A regular sentence.', 'start': 8.0, 'end': 9.5},
-            {'text': 'And then, boom! A loud sound.', 'start': 10.0, 'end': 12.0},
-            {'text': 'Followed by silence.', 'start': 14.0, 'end': 15.5},
-            {'text': 'Another question?', 'start': 16.0, 'end': 17.0},
-            {'text': 'This is also amazing!', 'start': 18.0, 'end': 20.0},
-        ]
+        self.mock_transcript_result = {
+            'segments': [
+                {'text': 'Hello there.', 'start': 0.0, 'end': 1.5},
+                {'text': 'So, what is the plan?', 'start': 2.0, 'end': 4.0},
+                {'text': 'This is just amazing!', 'start': 5.0, 'end': 7.5},
+                {'text': 'A regular sentence.', 'start': 8.0, 'end': 9.5},
+                {'text': 'And then, boom! A loud sound.', 'start': 10.0, 'end': 12.0},
+                {'text': 'Followed by silence.', 'start': 14.0, 'end': 15.5},
+                {'text': 'Another question?', 'start': 16.0, 'end': 17.0},
+                {'text': 'This is also amazing!', 'start': 18.0, 'end': 20.0},
+            ]
+        }
 
         self.mock_signals = [
             # Moment 1: Question followed by loud sound + keyword
@@ -32,7 +34,7 @@ class TestClipCurator(unittest.TestCase):
             {'type': 'question', 'text': 'Another question?', 'start': 16.2, 'end': 17.0},
         ]
 
-        self.curator = ClipCurator(self.mock_signals, self.mock_transcript)
+        self.curator = ClipCurator(self.mock_signals, self.mock_transcript_result)
 
     def test_score_signals(self):
         """Test if signals are scored correctly."""
@@ -80,7 +82,7 @@ class TestClipCurator(unittest.TestCase):
             # Clip 2 (Lower score, but overlaps)
             {'type': 'keyword', 'start': 3.0, 'end': 4.0, 'text': 'k1'},
         ]
-        curator = ClipCurator(overlapping_signals, self.mock_transcript)
+        curator = ClipCurator(overlapping_signals, self.mock_transcript_result)
         curator.video_duration = 20
 
         clips = curator.select_best_clips(top_n=2, overlap_threshold=0.3)
@@ -96,7 +98,7 @@ class TestClipCurator(unittest.TestCase):
         signals = [{'type': 'loud_segment', 'start': 6.5, 'end': 7.0, 'score': 30}]
         # Transcript segment is: {'text': 'This is just amazing!', 'start': 5.0, 'end': 7.5}
 
-        curator = ClipCurator(signals, self.mock_transcript)
+        curator = ClipCurator(signals, self.mock_transcript_result)
         curator.video_duration = 20
 
         clips = curator.select_best_clips(top_n=1)
