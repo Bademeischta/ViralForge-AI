@@ -1,84 +1,109 @@
 import os
 import argparse
 import logging
+import json
+
+# V1 Components
 from viralforge.pipeline import ContentPipeline
 from viralforge.recognizer import SignalRecognizer
 from viralforge.curator import ClipCurator
 from viralforge.editor import VideoEditor
 
-# Configure logging
+# V2 Components
+from viralforge.game_pipeline import GameDataPipeline
+from viralforge.observer import GameObserver
+from viralforge.narrative_curator import NarrativeCurator
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def main(youtube_url: str, output_dir: str = "output_clips"):
-    """
-    Runs the full ViralForge AI pipeline on a single YouTube URL.
+def run_v1_pipeline(youtube_url: str, output_dir: str, workspace_dir: str):
+    """Runs the original V1 (audio/text-based) pipeline."""
+    logging.info("--- Running V1 Standard Analysis Pipeline ---")
 
-    1.  Downloads the video.
-    2.  Extracts and transcribes the audio.
-    3.  Analyzes the content for signals.
-    4.  Curates the best moments.
-    5.  Edits and exports the final clips.
-    """
-    logging.info(f"Starting ViralForge AI pipeline for URL: {youtube_url}")
-
-    # --- Phase 1: Content Pipeline ---
-    logging.info("--- Phase 1: Running Content Pipeline ---")
-    # We create a persistent workspace to inspect intermediate files if needed.
-    workspace_dir = "viralforge_workspace"
-    content_pipeline = ContentPipeline(workspace_dir=workspace_dir)
-
-    video_path = content_pipeline.download_video(youtube_url)
-    if not video_path:
-        logging.error("Failed to download video. Exiting pipeline.")
+    pipeline = ContentPipeline(workspace_dir=workspace_dir)
+    # The V1 pipeline is destructive to its temp files, so we run it completely.
+    transcript_result = pipeline.process_url(youtube_url, cleanup=False)
+    if not transcript_result:
+        logging.error("V1 Pipeline failed. Exiting.")
         return
 
-    audio_path = content_pipeline.extract_audio(video_path)
-    if not audio_path:
-        logging.error("Failed to extract audio. Exiting pipeline.")
-        return
+    # To use the V1 curator, we need to re-download the video to get the path
+    # This is inefficient but necessary as V1's process_url cleans up paths.
+    # A better refactor would be to have process_url return all paths.
+    video_path = pipeline.download_video(youtube_url)
+    audio_path = os.path.join(workspace_dir, os.path.splitext(os.path.basename(video_path))[0] + ".mp3")
 
-    transcript_result = content_pipeline.transcribe_audio(audio_path)
-    if not transcript_result or not transcript_result.get('segments'):
-        logging.error("Failed to transcribe audio. Exiting pipeline.")
-        return
-
-    logging.info("Content pipeline completed. Transcript and audio are ready.")
-
-    # --- Phase 2: Signal Recognition ---
-    logging.info("--- Phase 2: Recognizing Signals ---")
     recognizer = SignalRecognizer(transcript_result, audio_path)
     signals = recognizer.find_signals()
-    if not signals:
-        logging.warning("No signals were recognized. No clips will be produced.")
-        return
-    logging.info(f"Signal recognition completed. Found {len(signals)} signals.")
 
-    # --- Phase 3: Clip Curation ---
-    logging.info("--- Phase 3: Curating Best Clips ---")
     curator = ClipCurator(signals, transcript_result)
-    best_clips = curator.select_best_clips(top_n=5) # Select top 5 clips
-    if not best_clips:
-        logging.warning("No suitable clips were curated. Exiting.")
-        return
-    logging.info(f"Curation completed. Selected {len(best_clips)} clips for production.")
-    for i, clip in enumerate(best_clips):
-        logging.info(f"  - Clip #{i+1}: {clip['start']:.2f}s to {clip['end']:.2f}s (Score: {clip['score']})")
+    best_clips = curator.select_best_clips(top_n=5)
 
-    # --- Phase 4: Video Editing ---
-    logging.info("--- Phase 4: Producing Final Videos ---")
+    if not best_clips:
+        logging.warning("V1 Curator found no suitable clips.")
+        return
+
     editor = VideoEditor(video_path, transcript_result)
     editor.produce_viral_clips(best_clips, output_dir)
 
-    logging.info(f"--- Pipeline Finished ---")
-    logging.info(f"Final clips are available in the '{output_dir}' directory.")
-    # Note: Intermediate files in 'viralforge_workspace' are not deleted by default
-    # in this script, allowing for inspection. You can delete the folder manually.
+def run_v2_valorant_pipeline(youtube_url: str, output_dir: str, workspace_dir: str):
+    """Runs the V2 (gameplay computer vision-based) pipeline."""
+    logging.info("--- Running V2 Valorant Analysis Pipeline ---")
 
-if __name__ == "__main__":
+    # --- V2 Phase 1: Game Data Ingestion ---
+    game_pipeline = GameDataPipeline(workspace_dir=workspace_dir)
+    ingestion_data = game_pipeline.process_game_video(youtube_url)
+    if not ingestion_data:
+        logging.error("V2 Game Data Pipeline failed. Exiting.")
+        return
+
+    video_path = ingestion_data["video_path"]
+    audio_path = ingestion_data["audio_path"]
+    frames_dir = ingestion_data["frames_dir"]
+    transcript_result = ingestion_data["transcription_result"]
+
+    # --- V2 Phase 2: Game Observation (CV) ---
+    observer = GameObserver(frames_dir)
+    game_events = observer.analyze_all_frames()
+
+    # --- V1 Phase 2 (re-used): Audio/Text Signal Recognition ---
+    # We combine the V1 and V2 analyses
+    recognizer = SignalRecognizer(transcript_result, audio_path)
+    text_audio_events = recognizer.find_signals()
+
+    # --- V2 Phase 3: Narrative Curation ---
+    all_events = game_events + text_audio_events
+
+    curator = NarrativeCurator(all_events, transcript_result)
+    best_narratives = curator.select_best_clips(top_n=5)
+
+    if not best_narratives:
+        logging.warning("V2 Narrative Curator found no suitable clips.")
+        return
+
+    # --- V1/V2 Phase 4: Editing ---
+    # The editor is re-used for V2 as well
+    editor = VideoEditor(video_path, transcript_result)
+    editor.produce_viral_clips(best_narratives, output_dir)
+
+def main():
     parser = argparse.ArgumentParser(description="ViralForge AI: Automatically create short-form viral clips from YouTube videos.")
     parser.add_argument("youtube_url", type=str, help="The full URL of the YouTube video to process.")
+    parser.add_argument("--mode", type=str, default="v1", choices=["v1", "valorant"], help="The analysis mode to use ('v1' for general, 'valorant' for V2 CV analysis).")
     parser.add_argument("--output_dir", type=str, default="output_clips", help="The directory to save the final video clips.")
+    parser.add_argument("--workspace_dir", type=str, default="viralforge_workspace", help="A directory to store intermediate files.")
 
     args = parser.parse_args()
 
-    main(args.youtube_url, args.output_dir)
+    os.makedirs(args.workspace_dir, exist_ok=True)
+
+    if args.mode == "valorant":
+        run_v2_valorant_pipeline(args.youtube_url, args.output_dir, args.workspace_dir)
+    else:
+        run_v1_pipeline(args.youtube_url, args.output_dir, args.workspace_dir)
+
+    logging.info(f"--- Pipeline Finished ---")
+    logging.info(f"Final clips are available in the '{args.output_dir}' directory.")
+
+if __name__ == "__main__":
+    main()
