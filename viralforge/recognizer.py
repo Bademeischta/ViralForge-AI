@@ -12,15 +12,15 @@ class SignalRecognizer:
     Analyzes transcript and audio data to find signals indicating "interesting" moments.
     """
 
-    def __init__(self, transcript: List[Dict], audio_path: str):
+    def __init__(self, transcript_result: Dict, audio_path: str):
         """
         Initializes the SignalRecognizer.
 
         Args:
-            transcript (List[Dict]): The timestamped transcript from ContentPipeline.
+            transcript_result (Dict): The full result object from Whisper.
             audio_path (str): The file path to the audio file (.mp3).
         """
-        self.transcript = transcript
+        self.transcript = transcript_result.get('segments', [])
         self.audio_path = audio_path
 
         # Simple, extendable list of keywords indicating strong emotion or opinion.

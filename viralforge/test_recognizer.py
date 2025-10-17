@@ -7,15 +7,17 @@ class TestSignalRecognizer(unittest.TestCase):
 
     def setUp(self):
         """Set up common test data."""
-        self.sample_transcript = [
-            {'text': 'Alright, here we go.', 'start': 0.5, 'end': 2.0},
-            {'text': 'So, what is the main problem here?', 'start': 3.0, 'end': 5.0},
-            {'text': 'This is just incredible!', 'start': 6.0, 'end': 8.0},
-            {'text': 'I mean, wow.', 'start': 8.1, 'end': 8.8},
-            {'text': 'A normal sentence for testing.', 'start': 10.0, 'end': 12.0},
-        ]
+        self.sample_transcript_result = {
+            'segments': [
+                {'text': 'Alright, here we go.', 'start': 0.5, 'end': 2.0},
+                {'text': 'So, what is the main problem here?', 'start': 3.0, 'end': 5.0},
+                {'text': 'This is just incredible!', 'start': 6.0, 'end': 8.0},
+                {'text': 'I mean, wow.', 'start': 8.1, 'end': 8.8},
+                {'text': 'A normal sentence for testing.', 'start': 10.0, 'end': 12.0},
+            ]
+        }
         self.dummy_audio_path = "dummy/path/to/audio.mp3"
-        self.recognizer = SignalRecognizer(self.sample_transcript, self.dummy_audio_path)
+        self.recognizer = SignalRecognizer(self.sample_transcript_result, self.dummy_audio_path)
 
     def test_analyze_transcript_signals(self):
         """Test the text analysis for correct signal detection."""

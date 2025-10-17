@@ -30,23 +30,25 @@ class TestContentPipeline(unittest.TestCase):
         # Process the URL, but keep the files for inspection if needed
         transcription = pipeline.process_url(youtube_url, cleanup=True)
 
-        # 1. Check if the transcription is not None and is a list
+        # 1. Check if the transcription is not None and is a dict
         self.assertIsNotNone(transcription)
-        self.assertIsInstance(transcription, list)
+        self.assertIsInstance(transcription, dict)
 
-        # 2. Check if the transcription list is not empty
-        self.assertGreater(len(transcription), 0)
+        # 2. Check if the dict contains segments
+        self.assertIn('segments', transcription)
+        self.assertIsInstance(transcription['segments'], list)
+        self.assertGreater(len(transcription['segments']), 0)
 
         # 3. Check the structure of the first segment
-        first_segment = transcription[0]
+        first_segment = transcription['segments'][0]
         self.assertIn('start', first_segment)
         self.assertIn('end', first_segment)
         self.assertIn('text', first_segment)
+        self.assertIn('words', first_segment) # Check for word-level timestamps
 
-        # 4. Check the content of the transcription (optional but good)
-        full_text = " ".join(seg['text'] for seg in transcription).lower()
-        self.assertIn("elephants", full_text)
-        self.assertIn("cool", full_text)
+        # 4. Check the content of the transcription
+        self.assertIn("elephants", transcription['text'].lower())
+        self.assertIn("cool", transcription['text'].lower())
 
 if __name__ == '__main__':
     unittest.main()
