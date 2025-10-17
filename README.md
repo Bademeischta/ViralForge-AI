@@ -1,29 +1,23 @@
-# ViralForge AI
+# ViralForge AI V2.0
 
-**ViralForge AI** ist eine End-to-End-Python-Anwendung, die lange Videoinhalte (z.B. Podcasts, Let's Plays) von YouTube analysiert, die emotionalen Höhepunkte und "viralen" Momente identifiziert und diese vollautomatisch in kurze, aufmerksamkeitsstarke Clips für Plattformen wie TikTok, Shorts und Reels umwandelt.
+**ViralForge AI** ist eine End-to-End-Python-Anwendung, die lange Videoinhalte von YouTube analysiert und vollautomatisch in kurze, aufmerksamkeitsstarke Clips umwandelt. Das Projekt verfügt über zwei Analyse-Modi: einen allgemeinen Modus (V1) und einen hochspezialisierten Modus für Valorant-Gameplay (V2).
 
-## Funktionsweise
+## Funktionsweise & Modi
 
-Das Projekt ist in vier Phasen unterteilt, die nahtlos zusammenarbeiten:
+### V1: Standard-Analyse (Audio & Text)
+Dieser Modus eignet sich für allgemeine Videoinhalte wie Podcasts, Interviews oder Let's Plays. Er identifiziert interessante Momente, indem er die Transkript- und Audiodaten analysiert.
+*   **`ContentPipeline`**: Lädt Video, extrahiert Audio und erstellt eine wortgenaue Transkription.
+*   **`SignalRecognizer`**: Findet emotionale Signale (Fragen, Schlüsselwörter, Lautstärke, Pausen).
+*   **`ClipCurator`**: Bewertet die Dichte dieser Signale in Zeitfenstern, um die besten Momente auszuwählen.
+*   **`VideoEditor`**: Schneidet die Clips, formatiert sie in 9:16 und fügt animierte Untertitel hinzu.
 
-1.  **Phase 1: Das Fundament (`ContentPipeline`)**
-    *   Lädt ein beliebiges YouTube-Video mit `yt-dlp` herunter.
-    *   Extrahiert die Audiospur mit `ffmpeg`.
-    *   Erstellt eine präzise, wortgenaue Transkription mit Zeitstempeln mithilfe von `openai-whisper`.
-
-2.  **Phase 2: Die Analyse (`SignalRecognizer`)**
-    *   Analysiert das Transkript auf textbasierte Signale wie **Fragen**, emotionale **Schlüsselwörter** und **Ausrufe**.
-    *   Analysiert die Audiospur mit `librosa` auf auditive Signale wie **Lautstärkespitzen** (Lachen, Aufregung) und dramatische **Pausen**.
-
-3.  **Phase 3: Der Kurator (`ClipCurator`)**
-    *   Implementiert einen "Geschmacks-Algorithmus", der die erkannten Signale bewertet.
-    *   Verwendet ein gleitendes Zeitfenster, um die Dichte und Kombination von Signalen zu bewerten und "Momente" mit hohem viralen Potenzial zu finden.
-    *   Wählt die besten, nicht überlappenden Clips aus und passt ihre Grenzen an die gesprochenen Sätze an.
-
-4.  **Phase 4: Der Editor (`VideoEditor`)**
-    *   Nimmt die kuratierten Zeitstempel und schneidet die finalen Clips aus dem Originalvideo mit `moviepy`.
-    *   Formatiert die Clips automatisch in ein vertikales 9:16-Format.
-    *   Generiert und überlagert dynamische, Wort-für-Wort animierte Untertitel, bei denen das aktuell gesprochene Wort hervorgehoben wird.
+### V2: Valorant-Analyse (Computer Vision & Narrative)
+Dieser Modus ist speziell für Valorant-Gameplay konzipiert. Er kombiniert Computer Vision mit der V1-Analyse, um "narrative Ereignisketten" – kleine Geschichten im Spiel – zu finden und visuell zu inszenieren.
+*   **`GameDataPipeline`**: Erzwingt den Download in 1080p/60fps und extrahiert Frames für die Analyse.
+*   **`GameObserver`**: Erkennt präzise Spielereignisse (Kills, Headshots) durch Template-Matching im Killfeed der Video-Frames und nutzt eine robuste **Debouncing-Logik**, um einzelne Ereignisse zu identifizieren.
+*   **`SignalRecognizer`**: Wird wiederverwendet, um die Reaktionen des Spielers (Schreie, Kommentare) zu erfassen.
+*   **`NarrativeCurator`**: Das Herzstück von V2. Findet Muster wie **"Multi-Kills"** oder **"Reaktions-Kills"** (ein Kill gefolgt von einer lauten Audio-Reaktion) und bewertet sie mit einem **multiplikativen Scoring-System**.
+*   **`HollywoodEditor`**: Ein erweiterter Editor, der kontextsensitive Effekte anwendet, z.B. **Zeitlupe** für Headshots und **Text-Overlays** ("MULTI-KILL!", "REACTION!").
 
 ---
 
@@ -40,66 +34,76 @@ Das Projekt ist in vier Phasen unterteilt, die nahtlos zusammenarbeiten:
 
 **2. Projekt klonen:**
 ```bash
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/your-username/viralforge-ai.git
+cd viralforge-ai
 ```
+*(Ersetzen Sie die URL durch die tatsächliche Repository-URL)*
 
 **3. Abhängigkeiten installieren:**
-Alle erforderlichen Python-Pakete sind in der `requirements.txt`-Datei aufgeführt.
 ```bash
 pip install -r requirements.txt
 ```
+Die `assets/`-Verzeichnisstruktur mit den Valorant-Templates (`kill_icon.png`, `headshot_icon.png`) muss vorhanden sein, um den V2-Modus zu nutzen.
 
 **4. Ausführung:**
-Verwenden Sie das `main.py`-Skript, um die Pipeline zu starten. Übergeben Sie die YouTube-URL als Argument.
+Verwenden Sie das `main.py`-Skript und wählen Sie den gewünschten Modus mit dem `--mode`-Flag.
 
-```bash
-python main.py "https://www.youtube.com/watch?v=your_video_id"
-```
+*   **Für allgemeine Videos (V1-Modus):**
+    ```bash
+    python main.py "https://www.youtube.com/watch?v=your_video_id" --mode v1
+    ```
 
-Die fertigen Clips werden standardmäßig im Ordner `output_clips/` gespeichert. Sie können mit dem `--output_dir`-Flag ein anderes Verzeichnis angeben:
-```bash
-python main.py "URL" --output_dir "meine_neuen_clips"
-```
+*   **Für Valorant-Gameplay (V2-Modus):**
+    ```bash
+    python main.py "https://www.youtube.com/watch?v=valorant_gameplay_id" --mode valorant
+    ```
+
+Die fertigen Clips werden standardmäßig im Ordner `output_clips/` gespeichert.
 
 ---
 
 ### Nutzung in Google Colab
 
-Sie können ViralForge AI auch ohne lokale Installation direkt in einem Google Colab Notebook ausführen. Dies ist ideal zum Testen oder wenn Sie keinen lokalen Zugriff auf eine leistungsstarke Maschine haben.
-
 **Anleitung:**
 1.  Öffnen Sie ein neues Notebook in [Google Colab](https://colab.research.google.com/).
-2.  Fügen Sie den folgenden Code in eine Zelle ein und führen Sie sie aus. Dieser Block kümmert sich um die Installation aller notwendigen Abhängigkeiten und das Klonen des Projekts.
+2.  Fügen Sie den folgenden Code in eine Zelle ein und führen Sie sie aus. Dieser Block installiert alle Abhängigkeiten, klont das Repository und richtet die Asset-Struktur ein.
 
 ```python
-# @title ViralForge AI Setup in Google Colab
-# 1. Install System Dependencies (ffmpeg)
-!sudo apt-get update
-!sudo apt-get install -y ffmpeg
+# @title ViralForge AI V2.0 Setup in Google Colab
+# 1. Install System Dependencies
+!sudo apt-get update && sudo apt-get install -y ffmpeg
 
 # 2. Clone the ViralForge AI repository
-!git clone https://github.com/your-username/viralforge-ai.git
+# HINWEIS: Ersetzen Sie die URL durch die tatsächliche URL Ihres Repositorys!
+GIT_REPO_URL = "https://github.com/your-username/viralforge-ai.git"
+!git clone {GIT_REPO_URL}
 %cd viralforge-ai
 
 # 3. Install Python Dependencies
 !pip install -r requirements.txt
 
-print("\n\n✅ Setup complete! ViralForge AI is ready to use.")
-```
-*Hinweis: Ersetzen Sie `https://github.com/your-username/viralforge-ai.git` durch die tatsächliche URL des Projekt-Repositorys.*
+# 4. Create dummy assets for the V2 pipeline (falls nicht im Repo vorhanden)
+!mkdir -p assets/templates/valorant
+import numpy as np
+import cv2
+dummy_template = np.zeros((10, 10), dtype=np.uint8)
+cv2.imwrite("assets/templates/valorant/kill_icon.png", dummy_template)
+cv2.imwrite("assets/templates/valorant/headshot_icon.png", dummy_template)
 
-3.  Nachdem der Setup-Block abgeschlossen ist, können Sie die Pipeline in einer neuen Zelle mit der gewünschten YouTube-URL ausführen.
+print("\n\n✅ Setup complete! ViralForge AI V2.0 is ready to use.")
+```
+
+3.  Führen Sie die Analyse in einer neuen Zelle aus. Wählen Sie den Modus (`v1` oder `valorant`).
 
 ```python
 # @title Run the ViralForge AI Pipeline
-# @markdown Geben Sie die YouTube-URL des Videos ein, das Sie verarbeiten möchten.
-YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" # Beispiel-URL
+# @markdown Geben Sie die YouTube-URL und den Analyse-Modus an.
+YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" # @param {type:"string"}
+ANALYSIS_MODE = "v1" # @param ["v1", "valorant"]
 
 # Führen Sie das Hauptskript aus
-!python main.py "{YOUTUBE_URL}"
+!python main.py "{YOUTUBE_URL}" --mode {ANALYSIS_MODE}
 
-# Die Clips werden im Ordner /content/viralforge-ai/output_clips/ gespeichert.
-# Sie können sie im Dateibrowser auf der linken Seite finden und herunterladen.
-print("\n\n🚀 Pipeline finished! Check the 'output_clips' folder in the file browser.")
+print(f"\n\n🚀 Pipeline im {ANALYSIS_MODE}-Modus beendet! Überprüfen Sie den 'output_clips' Ordner im Dateibrowser.")
 ```
+Die erstellten Clips finden Sie im Ordner `/content/viralforge-ai/output_clips/`. Sie können sie von dort herunterladen.
