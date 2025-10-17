@@ -79,7 +79,7 @@ Sie können ViralForge AI auch ohne lokale Installation direkt in einem Google C
 !sudo apt-get install -y ffmpeg
 
 # 2. Clone the ViralForge AI repository
-!git clone https://github.com/your-username/viralforge-ai.git
+!git clone https://github.com/bademeischta/viralforge-ai.git
 %cd viralforge-ai
 
 # 3. Install Python Dependencies
