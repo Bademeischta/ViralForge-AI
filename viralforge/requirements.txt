@@ -1,7 +1,0 @@
-yt-dlp
-ffmpeg-python
-openai-whisper
-nltk
-librosa
-numpy
-moviepy==1.0.3
