@@ -94,6 +94,7 @@ print("\n\n✅ Setup complete! ViralForge AI is ready to use.")
 ```python
 # @title Run the ViralForge AI Pipeline
 # @markdown Geben Sie die YouTube-URL des Videos ein, das Sie verarbeiten möchten.
+%cd /content/viralforge-ai
 YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" # Beispiel-URL
 
 # Führen Sie das Hauptskript aus
