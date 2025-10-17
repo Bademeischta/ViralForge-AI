@@ -80,7 +80,7 @@ Sie können ViralForge AI auch ohne lokale Installation direkt in einem Google C
 
 # 2. Clone the ViralForge AI repository
 !git clone https://github.com/bademeischta/viralforge-ai.git
-%cd viralforge-ai
+%cd /content/viralforge-ai/viralforge
 
 # 3. Install Python Dependencies
 !pip install -r requirements.txt
