@@ -1,3 +1,6 @@
 yt-dlp
 ffmpeg-python
 openai-whisper
+nltk
+librosa
+numpy
