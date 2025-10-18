@@ -156,8 +156,15 @@ class VideoEditor:
                     fps=24
                 )
                 logging.info(f"Successfully exported clip to {output_path}")
+            except OSError as e:
+                if "No such file or directory" in str(e) and "ImageMagick" in str(e):
+                     logging.error(f"Failed to export clip {output_path}: ImageMagick is not installed or not found.")
+                     logging.error("Please install ImageMagick and ensure it's in your system's PATH.")
+                     logging.error("See the 'Troubleshooting' section in README.md for details.")
+                else:
+                    logging.error(f"An OS-level error occurred while exporting {output_path}: {e}")
             except Exception as e:
-                logging.error(f"Failed to export clip {output_path}: {e}")
+                logging.error(f"An unexpected error occurred while exporting {output_path}: {e}")
             finally:
                 # Close clips to free up resources
                 formatted_video.close()

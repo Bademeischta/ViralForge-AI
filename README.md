@@ -27,10 +27,14 @@ Dieser Modus ist speziell für Valorant-Gameplay konzipiert. Er kombiniert Compu
 
 **1. Voraussetzungen:**
 *   **Python 3.8+**: Stellen Sie sicher, dass Python installiert ist.
-*   **ffmpeg**: Sie müssen `ffmpeg` auf Ihrem System installiert haben.
+*   **ffmpeg**: Erforderlich für die Audio- und Videoverarbeitung.
     *   **Auf Ubuntu/Debian:** `sudo apt-get update && sudo apt-get install ffmpeg`
     *   **Auf macOS (mit Homebrew):** `brew install ffmpeg`
     *   **Auf Windows:** Laden Sie es von der [offiziellen Website](https://ffmpeg.org/download.html) herunter und fügen Sie es zu Ihrem System-PATH hinzu.
+*   **ImageMagick**: Erforderlich für die Erstellung von Text-Untertiteln.
+    *   **Auf Ubuntu/Debian:** `sudo apt-get install imagemagick`
+    *   **Auf macOS (mit Homebrew):** `brew install imagemagick`
+    *   **Auf Windows:** Laden Sie den Installer von der [offiziellen Website](https://imagemagick.org/script/download.php) herunter. **Wichtig:** Wählen Sie bei der Installation die Optionen "Install legacy utilities (e.g., convert)" und "Add application directory to your system path".
 
 **2. Projekt klonen:**
 ```bash
@@ -62,6 +66,18 @@ Die fertigen Clips werden standardmäßig im Ordner `output_clips/` gespeichert.
 
 ---
 
+## Fehlerbehebung (Troubleshooting)
+
+**Problem: Der Video-Download schlägt mit einem `Sign in to confirm...` Fehler fehl.**
+*   **Ursache:** YouTube blockiert den automatisierten Download. Dies geschieht häufig bei Videos mit Altersbeschränkung.
+*   **Lösung:** Versuchen Sie es mit einem anderen YouTube-Video. Fortgeschrittene Benutzer können Cookies aus ihrem Browser exportieren und mit `yt-dlp` verwenden (siehe [yt-dlp-Dokumentation](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp)).
+
+**Problem: Die Erstellung von Clips schlägt mit einem `OSError` oder `ImageMagick is not installed` fehl.**
+*   **Ursache:** Die Systemabhängigkeit `ImageMagick`, die für das Rendern von Text-Untertiteln benötigt wird, ist nicht installiert oder nicht im Systempfad verfügbar.
+*   **Lösung:** Befolgen Sie die Installationsanweisungen für `ImageMagick` für Ihr Betriebssystem im Abschnitt "Voraussetzungen".
+
+---
+
 ### Nutzung in Google Colab
 
 **Anleitung:**
@@ -70,8 +86,9 @@ Die fertigen Clips werden standardmäßig im Ordner `output_clips/` gespeichert.
 
 ```python
 # @title ViralForge AI V2.0 Setup in Google Colab
-# 1. Install System Dependencies
-!sudo apt-get update && sudo apt-get install -y ffmpeg
+# 1. Install System Dependencies (ffmpeg & ImageMagick)
+!sudo apt-get update
+!sudo apt-get install -y ffmpeg imagemagick
 
 # 2. Clone the ViralForge AI repository
 # HINWEIS: Ersetzen Sie die URL durch die tatsächliche URL Ihres Repositorys!
