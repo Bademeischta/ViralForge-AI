@@ -22,17 +22,15 @@ def run_v1_pipeline(youtube_url: str, output_dir: str, workspace_dir: str):
     logging.info("--- Running V1 Standard Analysis Pipeline ---")
 
     pipeline = ContentPipeline(workspace_dir=workspace_dir)
-    # The V1 pipeline is destructive to its temp files, so we run it completely.
-    transcript_result = pipeline.process_url(youtube_url, cleanup=False)
-    if not transcript_result:
-        logging.error("V1 Pipeline failed. Exiting.")
+    pipeline_result = pipeline.process_url(youtube_url, cleanup=False)
+
+    if not pipeline_result or not pipeline_result.get("transcript_result"):
+        logging.error("V1 Pipeline failed to process video and transcript. Exiting.")
         return
 
-    # To use the V1 curator, we need to re-download the video to get the path
-    # This is inefficient but necessary as V1's process_url cleans up paths.
-    # A better refactor would be to have process_url return all paths.
-    video_path = pipeline.download_video(youtube_url)
-    audio_path = os.path.join(workspace_dir, os.path.splitext(os.path.basename(video_path))[0] + ".mp3")
+    video_path = pipeline_result["video_path"]
+    audio_path = pipeline_result["audio_path"]
+    transcript_result = pipeline_result["transcript_result"]
 
     recognizer = SignalRecognizer(transcript_result, audio_path)
     signals = recognizer.find_signals()
@@ -62,9 +60,10 @@ def run_v2_valorant_pipeline(youtube_url: str, output_dir: str, workspace_dir: s
     audio_path = ingestion_data["audio_path"]
     frames_dir = ingestion_data["frames_dir"]
     transcript_result = ingestion_data["transcription_result"]
+    video_resolution = ingestion_data["video_resolution"]
 
     # --- V2 Phase 2: Game Observation (CV) ---
-    observer = GameObserver(frames_dir)
+    observer = GameObserver(frames_dir, video_resolution)
     game_events = observer.analyze_all_frames()
 
     # --- V1 Phase 2 (re-used): Audio/Text Signal Recognition ---

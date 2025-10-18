@@ -134,9 +134,16 @@ class GameDataPipeline(ContentPipeline):
             return None
 
         logging.info("--- V2 Game Data Pipeline Finished Successfully ---")
+        # Get video resolution
+        cap = cv2.VideoCapture(video_path)
+        video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+
         return {
             "video_path": video_path,
             "audio_path": audio_path,
             "frames_dir": frames_dir,
-            "transcription_result": transcription_result
+            "transcription_result": transcription_result,
+            "video_resolution": (video_width, video_height)
         }

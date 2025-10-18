@@ -11,44 +11,70 @@ class GameObserver:
     """
     Analyzes game footage frames to detect specific in-game events using computer vision.
     """
-    # Regions of Interest for a 1920x1080 Valorant gameplay screen
-    ROI_KILLFEED = (1550, 80, 350, 400) # (x, y, width, height)
-    ROI_TEAM_STATUS = (600, 10, 720, 80)
+    # Regions of Interest defined as relative coordinates (x1, y1, x2, y2)
+    ROI_KILLFEED_RELATIVE = (0.807, 0.074, 0.99, 0.44) # 80.7% to 99% width, 7.4% to 44% height
 
-    def __init__(self, frames_dir: str, assets_dir: str = "assets"):
+    def __init__(self, frames_dir: str, video_resolution: Tuple[int, int], assets_dir: str = "assets"):
         """
         Initializes the GameObserver.
 
         Args:
-            frames_dir (str): The directory containing the extracted game frames.
-            assets_dir (str): The directory containing template images for matching.
+            frames_dir (str): The directory containing extracted game frames.
+            video_resolution (Tuple[int, int]): The (width, height) of the video.
+            assets_dir (str): The directory containing template images.
         """
         self.frames_dir = frames_dir
         self.assets_dir = assets_dir
-        self.templates = self._load_templates()
+        self.video_width, self.video_height = video_resolution
 
-        # State for debouncing detections
+        # Calculate absolute ROI pixels from relative coordinates
+        self.roi_killfeed_abs = self._calculate_absolute_roi(self.ROI_KILLFEED_RELATIVE)
+
+        self.templates_valid = True
+        self.templates = self._load_templates()
         self.last_detection_map = {}
 
+    def _calculate_absolute_roi(self, relative_roi: Tuple[float, float, float, float]) -> Tuple[int, int, int, int]:
+        """Calculates absolute pixel coordinates for an ROI based on video resolution."""
+        x1_rel, y1_rel, x2_rel, y2_rel = relative_roi
+        x1 = int(x1_rel * self.video_width)
+        y1 = int(y1_rel * self.video_height)
+        x2 = int(x2_rel * self.video_width)
+        y2 = int(y2_rel * self.video_height)
+        return (x1, y1, x2 - x1, y2 - y1) # Return as (x, y, width, height)
+
     def _load_templates(self) -> Dict[str, np.ndarray]:
-        """Loads all template images from the assets directory."""
+        """Loads all template images from the assets directory and validates them."""
         templates = {}
         valorant_templates_path = os.path.join(self.assets_dir, "templates", "valorant")
         if not os.path.exists(valorant_templates_path):
             logging.error(f"Valorant templates directory not found at: {valorant_templates_path}")
+            self.templates_valid = False
             return {}
 
         for icon_file in os.listdir(valorant_templates_path):
             if icon_file.endswith(".png"):
                 icon_name = os.path.splitext(icon_file)[0]
                 icon_path = os.path.join(valorant_templates_path, icon_file)
-                # Load in grayscale for template matching
+
+                # Check if file is empty or too small
+                if not os.path.exists(icon_path) or os.path.getsize(icon_path) < 100: # 100 bytes as a reasonable minimum
+                    logging.warning(f"Template file is missing, empty or too small: {icon_path}")
+                    self.templates_valid = False
+                    continue
+
                 template = cv2.imread(icon_path, cv2.IMREAD_GRAYSCALE)
                 if template is not None:
                     templates[icon_name] = template
                     logging.info(f"Loaded template: {icon_name}")
                 else:
-                    logging.warning(f"Could not load template: {icon_path}")
+                    logging.warning(f"Could not load template with OpenCV: {icon_path}")
+                    self.templates_valid = False
+
+        if not templates:
+            logging.error("No valid templates were loaded.")
+            self.templates_valid = False
+
         return templates
 
     def detect_events_in_frame(self, frame_path: str) -> List[Dict]:
@@ -69,7 +95,7 @@ class GameObserver:
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # --- Killfeed Analysis ---
-        x, y, w, h = self.ROI_KILLFEED
+        x, y, w, h = self.roi_killfeed_abs
         killfeed_roi = gray_frame[y:y+h, x:x+w]
 
         for template_name, template_img in self.templates.items():
@@ -101,6 +127,10 @@ class GameObserver:
         Returns:
             A chronologically sorted list of unique, debounced events.
         """
+        if not self.templates_valid:
+            logging.error("FEHLER: Valorant-Template-Bilder in 'assets/templates/valorant/' fehlen oder sind leer. Der V2-Modus kann ohne gültige Vorlagen nicht ausgeführt werden.")
+            return []
+
         logging.info("Starting analysis of all extracted frames...")
         all_events = []
 
@@ -121,7 +151,7 @@ class GameObserver:
             frame_detection_map = {}
 
             gray_frame = cv2.cvtColor(cv2.imread(frame_path), cv2.COLOR_BGR2GRAY)
-            x, y, w, h = self.ROI_KILLFEED
+            x, y, w, h = self.roi_killfeed_abs
             killfeed_roi = gray_frame[y:y+h, x:x+w]
 
             for template_name, template_img in self.templates.items():
