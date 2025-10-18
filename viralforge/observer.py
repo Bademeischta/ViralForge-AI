@@ -14,11 +14,9 @@ class GameObserver:
     Analyzes game footage frames to detect ego-centric kill events using
     a multi-factor verification process.
     """
-    # Relative ROIs for a single killfeed entry
-    ROI_KILLFEED_ENTRY_RELATIVE = (0.80, 0.15, 0.99, 0.40) # A larger area to find entries
-    ROI_NAME_IN_ENTRY_RELATIVE = (0.10, 0.10, 0.45, 0.90) # Relative to the entry itself
+    ROI_KILLFEED_RELATIVE = (0.80, 0.15, 0.99, 0.40)
+    ROI_NAME_IN_ENTRY_RELATIVE = (0.10, 0.10, 0.45, 0.90)
 
-    # HSV Color Range for the player's own kill color (greenish)
     EGO_KILL_COLOR_LOWER_HSV = np.array([30, 100, 100])
     EGO_KILL_COLOR_UPPER_HSV = np.array([70, 255, 255])
 
@@ -31,22 +29,20 @@ class GameObserver:
         self.agent_templates = self._load_templates_from_dir("agents")
         self.icon_templates = self._load_templates_from_dir("icons")
 
-        self.last_killfeed_lines = []
+        self.last_killfeed_text = ""
 
-    def _calculate_absolute_roi(self, relative_roi: Tuple[float, float, float, float]) -> Tuple[int, int, int, int]:
-        x1 = int(relative_roi[0] * self.video_width)
-        y1 = int(relative_roi[1] * self.video_height)
-        x2 = int(relative_roi[2] * self.video_width)
-        y2 = int(relative_roi[3] * self.video_height)
+    def _calculate_absolute_roi(self, relative_roi: Tuple[float, float, float, float], base_shape) -> Tuple[int, int, int, int]:
+        base_h, base_w = base_shape[:2]
+        x1 = int(relative_roi[0] * base_w)
+        y1 = int(relative_roi[1] * base_h)
+        x2 = int(relative_roi[2] * base_w)
+        y2 = int(relative_roi[3] * base_h)
         return (x1, y1, x2 - x1, y2 - y1)
 
     def _load_templates_from_dir(self, dir_name: str) -> Dict[str, np.ndarray]:
-        """Dynamically loads all .png templates from a given subdirectory."""
         templates = {}
         template_path = os.path.join(self.assets_dir, "templates", "valorant", dir_name)
-
         if not os.path.exists(template_path): return templates
-
         for f_name in os.listdir(template_path):
             if f_name.endswith(".png"):
                 name = os.path.splitext(f_name)[0]
@@ -56,31 +52,18 @@ class GameObserver:
         return templates
 
     def _is_ego_kill_color(self, image_entry: np.ndarray) -> bool:
-        """Checks if the background color of a killfeed entry is green (ego kill)."""
         hsv_image = cv2.cvtColor(image_entry, cv2.COLOR_BGR2HSV)
-        # Create a mask for the green color range
         mask = cv2.inRange(hsv_image, self.EGO_KILL_COLOR_LOWER_HSV, self.EGO_KILL_COLOR_UPPER_HSV)
-        # Calculate the percentage of green pixels
         green_percentage = (cv2.countNonZero(mask) / (image_entry.shape[0] * image_entry.shape[1])) * 100
-        return green_percentage > 10 # If more than 10% of pixels are in the green range
+        return green_percentage > 10
 
     def _verify_player_name(self, image_entry: np.ndarray) -> bool:
-        """Performs OCR on the name region and fuzzy matches it against the player's name."""
-        h, w, _ = image_entry.shape
-        x1 = int(self.ROI_NAME_IN_ENTRY_RELATIVE[0] * w)
-        y1 = int(self.ROI_NAME_IN_ENTRY_RELATIVE[1] * h)
-        x2 = int(self.ROI_NAME_IN_ENTRY_RELATIVE[2] * w)
-        y2 = int(self.ROI_NAME_IN_ENTRY_RELATIVE[3] * h)
-
-        name_roi = image_entry[y1:y2, x1:x2]
+        x, y, w, h = self._calculate_absolute_roi(self.ROI_NAME_IN_ENTRY_RELATIVE, image_entry.shape)
+        name_roi = image_entry[y:y+h, x:x+w]
         preprocessed_roi = self._preprocess_for_ocr(name_roi)
-
         try:
             extracted_text = pytesseract.image_to_string(preprocessed_roi, config=r'--oem 3 --psm 7').strip()
-            if not extracted_text: return False
-
-            similarity = fuzz.ratio(extracted_text.lower(), self.player_name.lower())
-            return similarity > 85
+            return fuzz.ratio(extracted_text.lower(), self.player_name.lower()) > 85
         except Exception:
             return False
 
@@ -89,29 +72,54 @@ class GameObserver:
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         return thresh
 
+    def _find_template_in_roi(self, roi: np.ndarray, templates: Dict[str, np.ndarray]) -> bool:
+        """Checks if any of the provided templates match within the ROI."""
+        for t_name, t_img in templates.items():
+            if t_img is None or roi.shape[0] < t_img.shape[0] or roi.shape[1] < t_img.shape[1]:
+                continue
+            res = cv2.matchTemplate(roi, t_img, cv2.TM_CCOEFF_NORMED)
+            if np.max(res) > 0.8: # Confidence threshold
+                return True
+        return False
+
     def analyze_all_frames(self) -> List[Dict]:
-        """
-        The main analysis loop that performs the four-factor check for each potential kill.
-        """
-        # This is a simplified placeholder for the full four-factor check logic.
-        # A real implementation would be much more complex, involving finding contours
-        # of each killfeed entry, then running the four checks on each entry.
-        # For this task, we will simulate this process.
+        logging.info("Starting V2 Ego-Centric Analysis...")
+        all_events = []
+        frame_files = sorted(os.listdir(self.frames_dir))
 
-        logging.info("Starting V2 Ego-Centric Analysis (Simulated)...")
-        # In a real scenario, we would loop through frames and detected killfeed entries.
-        # Here, we just return a dummy event to show the structure.
-        simulated_ego_kill = {
-            "timestamp": 123.45,
-            "event": "kill",
-            "details": {
-                "type": "headshot",
-                "text": f"{self.player_name} [Vandal] Enemy",
-                "verified_by": ["color_filter", "agent_template", "icon_template", "ocr_name_match"]
-            }
-        }
+        for frame_file in frame_files:
+            frame_path = os.path.join(self.frames_dir, frame_file)
+            timestamp_ms = int(os.path.splitext(frame_file)[0].split('_')[1])
+            frame = cv2.imread(frame_path)
+            if frame is None: continue
 
-        all_events = [simulated_ego_kill]
+            # This is a simplified logic that treats the whole killfeed as one entry
+            # A real implementation would use contour detection to find individual entries
+            x, y, w, h = self._calculate_absolute_roi(self.ROI_KILLFEED_RELATIVE, frame.shape)
+            killfeed_entry_roi = frame[y:y+h, x:x+w]
+
+            # --- The Four-Factor Check ---
+            # 1. Color Filter
+            if not self._is_ego_kill_color(killfeed_entry_roi):
+                continue
+
+            # 2. & 3. Template Checks (simplified: check if present anywhere in the entry)
+            agent_found = self._find_template_in_roi(cv2.cvtColor(killfeed_entry_roi, cv2.COLOR_BGR2GRAY), self.agent_templates)
+            icon_found = self._find_template_in_roi(cv2.cvtColor(killfeed_entry_roi, cv2.COLOR_BGR2GRAY), self.icon_templates)
+
+            # 4. Name Check
+            name_verified = self._verify_player_name(killfeed_entry_roi)
+
+            # --- Debouncing & Event Creation ---
+            # Create a unique string for the current state to debounce
+            current_text = f"agent:{agent_found}_icon:{icon_found}_name:{name_verified}"
+            if name_verified and agent_found and icon_found and current_text != self.last_killfeed_text:
+                all_events.append({
+                    "timestamp": timestamp_ms / 1000.0,
+                    "event": "kill",
+                    "details": { "type": "Ego-Kill (Verified)", "text": f"{self.player_name} kill" }
+                })
+            self.last_killfeed_text = current_text
 
         logging.info(f"V2 Analysis complete. Found {len(all_events)} verified ego-centric game events.")
 
