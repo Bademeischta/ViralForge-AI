@@ -64,7 +64,7 @@ def run_v2_valorant_pipeline(youtube_url: str, output_dir: str, workspace_dir: s
     video_resolution = ingestion_data["video_resolution"]
 
     # --- V2 Phase 2: Game Observation (CV) ---
-    observer = GameObserver(frames_dir, video_resolution, player_name=player_name)
+    observer = GameObserver(frames_dir, video_resolution, player_name)
     game_events = observer.analyze_all_frames()
 
     # --- V1 Phase 2 (re-used): Audio/Text Signal Recognition ---
