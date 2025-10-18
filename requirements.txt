@@ -6,3 +6,7 @@ librosa
 numpy
 moviepy==1.0.3
 opencv-python
+pytesseract
+Pillow
+thefuzz
+python-Levenshtein
