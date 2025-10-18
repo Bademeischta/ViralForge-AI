@@ -38,7 +38,7 @@ Dieser Modus ist speziell für Valorant-Gameplay konzipiert. Er kombiniert Compu
 
 **2. Projekt klonen:**
 ```bash
-git clone https://github.com/your-username/viralforge-ai.git
+git clone https://github.com/bademeischta/viralforge-ai.git
 cd viralforge-ai
 ```
 *(Ersetzen Sie die URL durch die tatsächliche Repository-URL)*
