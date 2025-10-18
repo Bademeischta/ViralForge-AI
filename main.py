@@ -71,6 +71,11 @@ def run_v2_valorant_pipeline(youtube_url: str, output_dir: str, workspace_dir: s
     recognizer = SignalRecognizer(transcript_result, audio_path)
     text_audio_events = recognizer.find_signals()
 
+    # Unify data structure: ensure all events have a 'timestamp' key for sorting
+    for event in text_audio_events:
+        if 'timestamp' not in event:
+            event['timestamp'] = event['start']
+
     # --- V2 Phase 3: Narrative Curation ---
     all_events = game_events + text_audio_events
 
