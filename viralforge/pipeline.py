@@ -122,7 +122,7 @@ class ContentPipeline:
             logging.error(f"Error during audio transcription: {e}")
             return None
 
-    def process_url(self, youtube_url: str, cleanup: bool = True) -> Union[List[Dict], None]:
+    def process_url(self, youtube_url: str, cleanup: bool = True) -> Union[Dict, None]:
         """
         Processes a YouTube URL by downloading, extracting audio, and transcribing.
 
@@ -132,7 +132,7 @@ class ContentPipeline:
                                       Defaults to True.
 
         Returns:
-            list: The timestamped transcription data, or None if any step failed.
+            dict: A dictionary containing the transcript result and file paths.
         """
         video_path = self.download_video(youtube_url)
         if not video_path:
@@ -144,18 +144,23 @@ class ContentPipeline:
                 self._cleanup_file(video_path)
             return None
 
-        transcription = self.transcribe_audio(audio_path)
+        transcript_result = self.transcribe_audio(audio_path)
+
+        result = {
+            "video_path": video_path,
+            "audio_path": audio_path,
+            "transcript_result": transcript_result
+        }
 
         if cleanup:
             logging.info("Cleaning up temporary files...")
             self._cleanup_file(video_path)
             self._cleanup_file(audio_path)
+            if self.temp_dir_obj:
+                self.temp_dir_obj.cleanup()
+                logging.info(f"Temporary workspace directory {self.workspace_dir} removed.")
 
-        if self.temp_dir_obj:
-            self.temp_dir_obj.cleanup()
-            logging.info(f"Temporary workspace directory {self.workspace_dir} removed.")
-
-        return transcription
+        return result
 
     def _cleanup_file(self, file_path: str):
         """Helper to safely delete a file."""
