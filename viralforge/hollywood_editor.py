@@ -91,7 +91,13 @@ class HollywoodEditor(VideoEditor):
             try:
                 final_video.write_videofile(output_path, codec='libx264', audio_codec='aac', temp_audiofile='temp-audio.m4a', remove_temp=True, preset='medium', fps=24)
                 logging.info(f"Successfully exported stylized clip to {output_path}")
+            except OSError as e:
+                if "No such file or directory" in str(e) or "not found" in str(e).lower():
+                     logging.error(f"Failed to export clip {output_path}: ImageMagick is likely not installed or not found in your system's PATH.")
+                     logging.error("Please see the 'Troubleshooting' section in README.md for installation instructions.")
+                else:
+                    logging.error(f"An OS-level error occurred while exporting {output_path}: {e}")
             except Exception as e:
-                logging.error(f"Failed to export stylized clip {output_path}: {e}")
+                logging.error(f"An unexpected error occurred while exporting {output_path}: {e}")
             finally:
                 final_video.close()
